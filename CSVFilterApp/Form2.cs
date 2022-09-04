@@ -1,4 +1,4 @@
-using System.Data;
+﻿using System.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,22 +6,21 @@ using System.Text;
 using System.Reflection;
 using MaterialSkin.Controls;
 using MaterialSkin;
+using System.IO;
 
-namespace CSVFinder
+namespace CSVFilterApp
 {
-    public partial class Form1 : MaterialForm
+    public partial class Form2 : MaterialForm
     {
-        MaterialSkinManager materialSkinManager = MaterialSkinManager.Instance;
-
-        public Form1()
+        public Form2()
         {
             InitializeComponent();
 
+            var materialSkinManager = MaterialSkinManager.Instance;
             materialSkinManager.AddFormToManage(this);
             materialSkinManager.Theme = MaterialSkinManager.Themes.DARK;
             materialSkinManager.ColorScheme = new ColorScheme(Primary.BlueGrey800, Primary.BlueGrey900, Primary.BlueGrey500, Accent.LightBlue200, TextShade.WHITE);
         }
-
         private void button1_Click(object sender, EventArgs e)
         {
             openFileDialog1.ShowDialog();
@@ -35,7 +34,7 @@ namespace CSVFinder
             DataTable dt = new DataTable();
             try
             {
-                if(txtPath.Text != String.Empty)
+                if (txtPath.Text != String.Empty)
                 {
                     string[] lines = System.IO.File.ReadAllLines(filePath);
                     if (lines.Length > 0)
@@ -70,7 +69,7 @@ namespace CSVFinder
                         SetNonSortable();
                     }
                     lblStatus.Text = "Last Read " + DateTime.Now.ToString("hh:mm:ss");
-                   
+
                 }
 
                 return dt;
@@ -82,6 +81,19 @@ namespace CSVFinder
             }
         }
 
+        private void button2_Click(object sender, EventArgs e)
+        {
+            var lst = CommonMethod.ConvertToList<DataModel>(BindData(txtPath.Text));
+            var lst2 = lst.Where(x => x.Name.Contains(textBox1.Text)).ToList();
+            var lst3 = CommonMethod.ToDataTable(lst2);
+            if (lst3.Rows.Count > 0)
+            {
+                dataGridView1.DataSource = lst3;
+                SetNonSortable();
+
+                CommonMethod.ToCSV(lst3, txtPath.Text + "copy");
+            }
+        }
 
         private void btnSave_Click(object sender, EventArgs e)
         {
@@ -115,84 +127,7 @@ namespace CSVFinder
             this.dataGridView1.Columns["REMARK"].SortMode = DataGridViewColumnSortMode.NotSortable;
         }
 
-        private void btnFind_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                List<DataModel> filter = new List<DataModel>();
-                List<DataModel> lst2 = new List<DataModel>();
-                List<DataModel> lst3 = new List<DataModel>();
-                List<DataModel> lst4 = new List<DataModel>();
-                List<DataModel> lst5 = new List<DataModel>();
-                List<DataModel> lst6 = new List<DataModel>();
 
-
-                bool IsTokenSearch = txtToken.Text != String.Empty ? true : false;
-                bool IsNameSearch = txtName.Text != String.Empty ? true : false;
-                bool IsContact_NoSearch = txtContact_No.Text != String.Empty ? true : false;
-                bool IsID_NoSearch = txtID_No.Text != String.Empty ? true : false;
-                bool IsREMARKSearch = txtRemark.Text != String.Empty ? true : false;
-
-                var lstLoadData = CommonMethod.ConvertToList<DataModel>(BindData(txtPath.Text));
-
-                if(IsTokenSearch)
-                     lst2 = lstLoadData.Where(x =>  x.Token_No.ToLower().Contains(txtToken.Text.ToLower())).ToList();
-                if (IsNameSearch)
-                    lst3 = lstLoadData.Where(x =>x.Name.ToLower().Contains(txtName.Text.ToLower())  ).ToList();
-                if (IsContact_NoSearch)
-                    lst4 = lstLoadData.Where(x =>x.Contact_No.ToLower().Contains(txtContact_No.Text.ToLower())  ).ToList();
-                if (IsID_NoSearch)
-                    lst5 = lstLoadData.Where(x =>x.ID_No.ToLower().Contains(txtID_No.Text.ToLower())  ).ToList();
-                if (IsREMARKSearch)
-                    lst6 = lstLoadData.Where(x => x.REMARK.ToLower().Contains(txtRemark.Text.ToLower()) ).ToList();
-
-
-                filter.AddRange(lst2);
-                filter.AddRange(lst3);
-                filter.AddRange(lst4);
-                filter.AddRange(lst5);
-                filter.AddRange(lst6);
-
-                var xx = filter.GroupBy(x => x.Token_No).Select(x=> x.FirstOrDefault()).ToList();
-
-                var lstAll = CommonMethod.ToDataTable(xx);
-
-                if (lstAll.Rows.Count > 0)
-                {
-                    dataGridView1.DataSource = lstAll;
-                    SetNonSortable();
-
-                    CommonMethod.ToCSV(lstAll, txtPath.Text + "copy");
-                }
-                else
-                {
-                    MessageBox.Show("No Data Find","Infor", MessageBoxButtons.OK,MessageBoxIcon.Information);
-                }
-            }
-            catch (Exception)
-            {
-
-                throw;
-            }
-        }
-
-        private void materialRadioButton1_CheckedChanged(object sender, EventArgs e)
-        {
-            if(materialRadioButton1.Checked)
-            {
-                materialRadioButton2.Checked = false;
-                materialSkinManager.Theme = MaterialSkinManager.Themes.DARK;
-            }
-        }
-
-        private void materialRadioButton2_CheckedChanged(object sender, EventArgs e)
-        {
-            if (materialRadioButton2.Checked)
-            {
-                materialRadioButton1.Checked = false;
-                materialSkinManager.Theme = MaterialSkinManager.Themes.LIGHT;
-            }
-        }
     }
 
     public static class CommonMethod
@@ -281,7 +216,6 @@ namespace CSVFinder
             }
             sw.Close();
         }
-
     }
 
     public class DataModel
