@@ -6,8 +6,11 @@ using System.Text;
 using System.Reflection;
 using MaterialSkin.Controls;
 using MaterialSkin;
+using System.Windows.Forms;
+using System.IO;
+using System.Deployment.Application;
 
-namespace CSVFinder
+namespace NFCSVFinder
 {
     public partial class Form1 : MaterialForm
     {
@@ -20,6 +23,8 @@ namespace CSVFinder
             materialSkinManager.AddFormToManage(this);
             materialSkinManager.Theme = MaterialSkinManager.Themes.DARK;
             materialSkinManager.ColorScheme = new ColorScheme(Primary.BlueGrey800, Primary.BlueGrey900, Primary.BlueGrey500, Accent.LightBlue200, TextShade.WHITE);
+
+            InstallUpdateSyncWithInfo(false);
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -194,6 +199,98 @@ namespace CSVFinder
             }
         }
 
+
+        private void InstallUpdateSyncWithInfo(bool status)
+        {
+            try
+            {
+                // Display a message that the app MUST reboot. Display the minimum required version.
+                UpdateCheckInfo info = null;
+
+                if (ApplicationDeployment.IsNetworkDeployed)
+                {
+                    ApplicationDeployment ad = ApplicationDeployment.CurrentDeployment;
+
+                    try
+                    {
+                        info = ad.CheckForDetailedUpdate();
+
+                    }
+                    catch (DeploymentDownloadException dde)
+                    {
+                        MessageBox.Show("The new version of the application cannot be downloaded at this time. \n\nPlease check your network connection, or try again later. Error: " + dde.Message);
+                        return;
+                    }
+                    catch (InvalidDeploymentException ide)
+                    {
+                        MessageBox.Show("Cannot check for a new version of the application. The ClickOnce deployment is corrupt. Please redeploy the application and try again. Error: " + ide.Message);
+                        return;
+                    }
+                    catch (InvalidOperationException ioe)
+                    {
+                        MessageBox.Show("This application cannot be updated. It is likely not a ClickOnce application. Error: " + ioe.Message);
+                        return;
+                    }
+
+                    if (info.UpdateAvailable)
+                    {
+                        Boolean doUpdate = true;
+
+                        if (!info.IsUpdateRequired)
+                        {
+                            DialogResult dr = MessageBox.Show("An update is available for DataFinder. Would you like to update the application now? \n\n(Version " + info.AvailableVersion + " ) " + info.UpdateSizeBytes / 1080 + " Mb", "Update Available", MessageBoxButtons.OKCancel);
+                            if (!(DialogResult.OK == dr))
+                            {
+                                doUpdate = false;
+                            }
+                        }
+                        else
+                        {
+                            // Display a message that the app MUST reboot. Display the minimum required version.
+                            MessageBox.Show("This GoodBoy application has detected a mandatory update from your current " +
+                                "version to version " + info.MinimumRequiredVersion.ToString() + " (" + info.UpdateSizeBytes / 1080 + " Mb)" +
+                                ". \n\nThe application will now install the update and restart.",
+                                "Update Available", MessageBoxButtons.OK,
+                                MessageBoxIcon.Information);
+                        }
+
+                        if (doUpdate)
+                        {
+                            try
+                            {
+                                ad.Update();
+                                MessageBox.Show("The application has been upgraded, and will now restart.");
+                                Application.Restart();
+                            }
+                            catch (DeploymentDownloadException dde)
+                            {
+                                MessageBox.Show("Cannot install the latest version of the application. \n\nPlease check your network connection, or try again later. Error: " + dde);
+                                return;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (status)
+                            MessageBox.Show("CurrentVersion: " + ad.CurrentVersion + "\n\n Time Of LastUpdate Check: " + ad.TimeOfLastUpdateCheck.ToString("yyyy-MM-ddd HH:mm:ss"));
+                    }
+                }
+                else
+                {
+                    MessageBox.Show("In DataFinder, the online update feature is disabled.", "Not published correctly.", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+
+                MessageBox.Show(ex.Message, "opps:(", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void materialFlatButton1_Click(object sender, EventArgs e)
+        {
+            InstallUpdateSyncWithInfo(true);
+        }
     }
 
     public static class CommonMethod
